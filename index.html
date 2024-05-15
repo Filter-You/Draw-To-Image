@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Generation</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-image: url('BG.jpeg');
+    background-size: cover; /* Adjust as needed */
+    background-position: center; /* Adjust as needed */
+  }
+
+  #container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 90%; /* Adjust width for smaller screens */
+  }
+
+  input[type="text"],
+  button {
+    margin: 10px 0;
+    width: calc(50% - 5px); /* Adjust width for smaller screens */
+  }
+
+  button {
+    flex: 1; /* Make both buttons take equal space */
+    background-color: white; /* Change button color to white */
+    border: none;
+    padding: 10px 20px; /* Adjust padding as needed */
+    margin: 0 25px; /* Add some margin between buttons */
+  }
+
+  #buttonContainer {
+    display: flex;
+    width: 40%;
+    justify-content: space-between; /* Add space between buttons */
+    margin-bottom: 10px;
+  }
+
+  img {
+    width: 100%; /* Adjust image width for smaller screens */
+    max-width: 720px; /* Maximum width */
+    height: auto;
+  }
+
+  canvas {
+    border: 1px solid #000000;
+    margin-top: 20px;
+    cursor: crosshair;
+    width: 100%;
+    max-width: 720px; /* Adjust max-width as needed */
+    height: auto;
+  }
+
+  #imageContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    /* Adjust layout for larger screens if needed */
+    #container {
+      max-width: 70%;
+    }
+
+    #imageContainer {
+      margin-top: 0;
+    }
+  }
+</style>
+</head>
+<body>
+  <div id="container">
+    <h1>Filter-You Sketch-To-Image Generation</h1>
+    <label for="promptInput">Enter Prompt:</label>
+    <input type="text" id="promptInput" placeholder="Eg : a magical forest">
+    <div id="buttonContainer"> <!-- Button container -->
+      <button onclick="generateImage()">Generate Image</button>
+      <button onclick="regeneratePage()">Regenerate Image</button> <!-- Updated button function -->
+    </div>
+    <p id="loadingText" style="display: none;">Generating...</p>
+    <div id="imageContainer">
+      <canvas id="drawCanvas" width="640" height="640"></canvas> <!-- Set canvas dimensions to 720x720 -->
+      <div id="generatedImage"></div>
+    </div>
+  </div>
+  
+  <script>
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    drawCtx.lineWidth = 3;
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+
+    drawCanvas.addEventListener('mousedown', startDrawing);
+    drawCanvas.addEventListener('touchstart', startDrawing);
+    drawCanvas.addEventListener('mousemove', draw);
+    drawCanvas.addEventListener('touchmove', draw);
+    drawCanvas.addEventListener('mouseup', stopDrawing);
+    drawCanvas.addEventListener('touchend', stopDrawing);
+    drawCanvas.addEventListener('mouseout', stopDrawing);
+
+    function getMousePos(canvas, e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.type.startsWith('mouse')) {
+        return {
+          x: (e.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+          y: (e.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+        };
+      } else if (e.type.startsWith('touch')) {
+        const touch = e.touches[0];
+        return {
+          x: (touch.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+          y: (touch.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+        };
+      }
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getMousePos(drawCanvas, e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getMousePos(drawCanvas, e);
+      const x = pos.x;
+      const y = pos.y;
+      drawCtx.beginPath();
+      drawCtx.moveTo(lastX, lastY);
+      drawCtx.lineTo(x, y);
+      drawCtx.stroke();
+      lastX = x;
+      lastY = y;
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    async function generateImage() {
+      const promptInput = document.getElementById('promptInput');
+      const drawCanvasDataUrl = drawCanvas.toDataURL('image/png');
+
+      const prompt = promptInput.value.trim();
+      if (!prompt) {
+        alert('Please enter a prompt.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', dataURLtoFile(drawCanvasDataUrl, 'drawing.png'));
+      formData.append('prompt', prompt);
+      formData.append('control_strength', '1'); // Adjust control strength as needed
+      formData.append('output_format', 'jpeg');
+
+      document.getElementById('loadingText').style.display = 'block';
+
+      const response = await fetch('https://api.stability.ai/v2beta/stable-image/control/sketch', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer sk-1SawtPotpBsy7xZrWXcSPsOytxiXMZrCAFnamfT3EmpfUfUl', // Replace with your actual API key
+          Accept: 'image/*'
+        },
+        body: formData
+      });
+
+      document.getElementById('loadingText').style.display = 'none';
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        
+        const generatedImageContainer = document.getElementById('generatedImage');
+        generatedImageContainer.innerHTML = ''; // Clear previous image
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.width = '100%'; // Resize the image to fit container width
+        generatedImageContainer.appendChild(img);
+      } else {
+        const errorMessage = await response.text();
+        alert(`Error: ${response.status} - ${errorMessage}`);
+      }
+    }
+
+    async function regeneratePage() {
+      // Reload the page to regenerate the image
+      location.reload();
+    }
+
+    function dataURLtoFile(dataUrl, filename) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
+    }
+  </script>
+</body>
+</html>
