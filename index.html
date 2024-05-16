@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Generation</title>
+<title>Filter-You AI</title>
+<link rel="icon" href="filteryou.jpg" type="image/jpeg"> <!-- Add favicon link -->
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -25,6 +26,7 @@
     text-align: center;
     padding: 20px;
     box-sizing: border-box;
+    position: relative; /* Needed for logo positioning */
   }
 
   input[type="text"],
@@ -63,16 +65,34 @@
     width: 100%;
   }
 
+  #loadingText {
+    display: none;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #ff0000; /* Red color for visibility */
+  }
+
+  #logo {
+    max-width: 100px; /* Adjust max-width for mobile compatibility */
+    width: 15%;
+    margin-bottom: 20px; /* Space between logo and heading */
+  }
+
   @media (min-width: 768px) {
     /* Adjust layout for larger screens if needed */
     #container {
       max-width: 70%;
+    }
+
+    #logo {
+      width: 100%; /* Adjust width for larger screens */
     }
   }
 </style>
 </head>
 <body>
   <div id="container">
+    <img id="logo" src="filteryou.jpg" alt="Logo"> <!-- Add logo image above heading -->
     <h1>Sketch To Image Generation</h1>
     <label for="promptInput">Enter Prompt:</label>
     <input type="text" id="promptInput" placeholder="Eg : a magical forest">
@@ -80,7 +100,7 @@
       <button onclick="generateImage()">Generate Image</button>
       <button onclick="regeneratePage()">Regenerate Image</button> <!-- Updated button function -->
     </div>
-    <p id="loadingText" style="display: none;">Generating...</p>
+    <p id="loadingText">Generating...</p>
     <div id="imageContainer">
       <canvas id="drawCanvas" width="540" height="540"></canvas> <!-- Set canvas dimensions to 720x720 -->
       <div id="generatedImage"></div>
@@ -211,3 +231,4 @@
   </script>
 </body>
 </html>
+
